@@ -1,8 +1,14 @@
 import bson
+import os
+
+from pymongo.database import Database
+from pymongo.errors import OperationFailure
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+from pydantic import HttpUrl
 
 from flask import current_app, g
 from flask_pymongo.wrappers import Database
-from flask_pymongo import PyMongo
 
 from pymongo.errors import DuplicateKeyError, OperationFailure
 from bson.objectid import ObjectId
@@ -16,10 +22,27 @@ def get_db() -> Database:
     """
     db = getattr(g, "_database", None)
     if db is None:
-        db = g._database = PyMongo(current_app).db
-       
+
+        db_username = os.environ.get("DB_USERNAME")
+        db_password = os.environ.get("DB_PASSWORD")
+
+
+        if not db_username or not db_password:
+            raise ValueError("Missing DB_USERNAME or DB_PASSWORD environment variable")
+        uri = (
+            f"mongodb+srv://{db_username}:{db_password}@nvim-plugin-list.kuxk7uc.mongodb.net/"
+            "?retryWrites=true&w=majority"
+        )
+
+        # setup db connection
+        client = MongoClient(uri, server_api=ServerApi("1"), uuidRepresentation="standard")
+        try:
+            client.admin.command("ping", check=True)
+            print("Successfully connected to the Atlas Cluster")
+
+        except OperationFailure as e:
+            print("Unable to connect to the Atlas Cluster, error:", str(e))
+
+        db = g._database = client["repos"]
     return db
-
-
-
 
