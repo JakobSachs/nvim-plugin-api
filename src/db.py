@@ -1,18 +1,11 @@
-import bson
 import os
 
-from pymongo.database import Database
-from pymongo.errors import OperationFailure
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
-from pydantic import HttpUrl
 
-from flask import current_app, g
 from flask_pymongo.wrappers import Database
 
-from pymongo.errors import DuplicateKeyError, OperationFailure
-from bson.objectid import ObjectId
-from bson.errors import InvalidId
+from pymongo.errors import  OperationFailure
 
 from flask import g,current_app
 
@@ -34,14 +27,14 @@ def get_db() -> Database:
             "?retryWrites=true&w=majority"
         )
 
-        # setup db connection
+            # setup db connection
         client = MongoClient(uri, server_api=ServerApi("1"), uuidRepresentation="standard")
         try:
             client.admin.command("ping", check=True)
-            print("Successfully connected to the Atlas Cluster")
+            current_app.logger.info("Successfully connected to the Atlas Cluster")
 
         except OperationFailure as e:
-            print("Unable to connect to the Atlas Cluster, error:", str(e))
+            current_app.logger.error("Unable to connect to the Atlas Cluster, error:", str(e))
 
         db = g._database = client["repos"]
     return db
