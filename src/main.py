@@ -55,6 +55,8 @@ def plugins():
             "description": x["description"],
             "url": x["url"],
             "stars": x["stars"],
+            "author": x["author"],
+            "last_updated": x["last_updated"],
         }
         for x in repos
     ]
