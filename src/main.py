@@ -19,6 +19,30 @@ def test():
     return "Hello World! This is a Flask app."
 
 
+@app.route("/languages")
+def languages():
+    """
+    List of all languages used in plugins. Sorted by repo count.
+    """
+
+    db = get_db()
+    languages = db["repos"].aggregate(
+        [
+            {
+                "$group": {
+                    "_id": "$language",  # Group by the 'language' field
+                    "count": {"$sum": 1},  # Count the number of documents in each group
+                }
+            }
+        ]
+    )
+    languages = sorted(languages, key=lambda x: x["count"], reverse=True)
+    # filter out ones with less then 20 repos
+    languages = [x for x in languages if x["count"] > 10]
+
+    return dumps(languages)
+
+
 @app.route("/plugins")
 def plugins():
     """
@@ -44,7 +68,7 @@ def plugins():
     repos = (
         db["repos"].find().sort(sort, pymongo.DESCENDING if desc else pymongo.ASCENDING)
     )
-    if page > 1: # handle page request
+    if page > 1:  # handle page request
         repos = repos.skip((page - 1) * app.config["PAGE_LIMIT"])
     repos = repos.limit(app.config["PAGE_LIMIT"])
 
@@ -64,6 +88,7 @@ def plugins():
 
     return dumps(res)
 
+
 @app.route("/plugins/<name>")
 def plugin_details(name):
     """
@@ -78,10 +103,11 @@ def plugin_details(name):
     repo.pop("id")
     return dumps(repo)
 
+
 @app.route("/plugins/search")
 def plugin_search():
     """
-    Search for plugins by name. 
+    Search for plugins by name.
     """
     query = request.args.get("q", "", type=str)
     db = get_db()
