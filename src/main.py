@@ -121,13 +121,13 @@ def plugins():
     return dumps(res)
 
 
-@app.route("/plugins/<name>")
-def plugin_details(name):
+@app.route("/plugin/<author>/<name>")
+def plugin_details(author,name):
     """
-    Get plugin info by name.
+    Get plugin info by author and name.
     """
     db = get_db()
-    repo = db["repos"].find_one({"name": name})
+    repo = db["repos"].find_one({"author":author,"name": name})
     if repo is None:
         return "Plugin not found", 404
 
