@@ -1,4 +1,4 @@
-import os
+import os, sys
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -33,11 +33,11 @@ def get_db() -> Database:
         try:
             client.admin.command("ping", check=True)
             current_app.logger.info("Successfully connected to the Atlas Cluster")
-
         except OperationFailure as e:
             current_app.logger.error(
                 "Unable to connect to the Atlas Cluster, error:", str(e)
             )
+            raise e
 
         db = g._database = client["repos"]
     return db

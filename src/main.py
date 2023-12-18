@@ -134,7 +134,6 @@ def plugin_details(author, name):
         return "Plugin not found", 404
 
     repo.pop("_id")
-    repo.pop("id")
     return dumps(repo)
 
 
