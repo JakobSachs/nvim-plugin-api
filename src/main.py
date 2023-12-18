@@ -1,6 +1,7 @@
 import os
 
 from bson.json_util import dumps
+from bson.regex import Regex
 import pymongo
 
 from flask import Flask, request
@@ -38,7 +39,7 @@ def languages():
     )
     languages = sorted(languages, key=lambda x: x["count"], reverse=True)
     # filter out ones with less then 20 repos
-    languages = [x for x in languages if x["count"] > 10]
+    languages = [x for x in languages if x["count"] >= 5]
 
     return dumps(languages)
 
@@ -52,21 +53,52 @@ def plugins():
         - page: int
         - sort: str (name, stars, last_updated) default: stars
         - desc: bool  default: true
+        - search: str
     """
+
+    # Handle page and sorting
     page = request.args.get("page", 1, type=int)
+
     sort = request.args.get("sort", "stars", type=str)
-    desc = request.args.get("desc", True, type=bool)
+    
+    # Handle and validate desc
+    desc_str:str= request.args.get("desc", "True", type=str)
+    desc: bool = False
+    if desc_str.lower() == "true":
+        desc = True
+    elif desc_str.lower() == "false":
+        desc = False
+    else:
+        return "Invalid desc parameter", 400
+
+    # Handle search
+    # TODO: make search more fuzzy and escape regex
+    search = request.args.get("search", "", type=str)
+    # Modify query to include universal search filter
+    search_filter = {}
+    if search:
+        regex_search = Regex(search, 'i')  # 'i' for case-insensitive
+        search_filter = {
+            "$or": [
+                {"name": regex_search},
+                {"description": regex_search},
+                {"author": regex_search}
+                # Add other searchable fields here
+            ]
+        }
+
+
 
     app.logger.debug(f"page: {page}, sort: {sort}, desc: {desc}")
 
-    # validate page
+    # validate 
     if sort not in ["name", "stars", "last_updated"]:
         return "Invalid sort parameter", 400
 
     # get repos
     db = get_db()
     repos = (
-        db["repos"].find().sort(sort, pymongo.DESCENDING if desc else pymongo.ASCENDING)
+        db["repos"].find(search_filter).sort(sort, pymongo.DESCENDING if desc else pymongo.ASCENDING)
     )
     if page > 1:  # handle page request
         repos = repos.skip((page - 1) * app.config["PAGE_LIMIT"])
