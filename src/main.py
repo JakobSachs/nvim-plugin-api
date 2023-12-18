@@ -27,7 +27,7 @@ def languages():
     """
 
     db = get_db()
-    languages = db["repos"].aggregate(
+    languages = db["repo"].aggregate(
         [
             {
                 "$group": {
@@ -60,9 +60,9 @@ def plugins():
     page = request.args.get("page", 1, type=int)
 
     sort = request.args.get("sort", "stars", type=str)
-    
+
     # Handle and validate desc
-    desc_str:str= request.args.get("desc", "True", type=str)
+    desc_str: str = request.args.get("desc", "True", type=str)
     desc: bool = False
     if desc_str.lower() == "true":
         desc = True
@@ -77,7 +77,7 @@ def plugins():
     # Modify query to include universal search filter
     search_filter = {}
     if search:
-        regex_search = Regex(search, 'i')  # 'i' for case-insensitive
+        regex_search = Regex(search, "i")  # 'i' for case-insensitive
         search_filter = {
             "$or": [
                 {"name": regex_search},
@@ -87,18 +87,18 @@ def plugins():
             ]
         }
 
-
-
     app.logger.debug(f"page: {page}, sort: {sort}, desc: {desc}")
 
-    # validate 
+    # validate
     if sort not in ["name", "stars", "last_updated"]:
         return "Invalid sort parameter", 400
 
     # get repos
     db = get_db()
     repos = (
-        db["repos"].find(search_filter).sort(sort, pymongo.DESCENDING if desc else pymongo.ASCENDING)
+        db["repo"]
+        .find(search_filter)
+        .sort(sort, pymongo.DESCENDING if desc else pymongo.ASCENDING)
     )
     if page > 1:  # handle page request
         repos = repos.skip((page - 1) * app.config["PAGE_LIMIT"])
@@ -122,12 +122,12 @@ def plugins():
 
 
 @app.route("/plugin/<author>/<name>")
-def plugin_details(author,name):
+def plugin_details(author, name):
     """
     Get plugin info by author and name.
     """
     db = get_db()
-    repo = db["repos"].find_one({"author":author,"name": name})
+    repo = db["repo"].find_one({"author": author, "name": name})
     if repo is None:
         return "Plugin not found", 404
 
@@ -143,13 +143,14 @@ def plugin_search():
     """
     query = request.args.get("q", "", type=str)
     db = get_db()
-    repos = db["repos"].find({"name": {"$regex": query, "$options": "i"}}).limit(15)
+    repos = db["repo"].find({"name": {"$regex": query, "$options": "i"}}).limit(15)
     res = [
         {
             "name": x["name"],
             "description": x["description"],
             "url": x["url"],
             "stars": x["stars"],
+            "readme": x["readme"] if "readme" in x else "",
         }
         for x in repos
     ]
