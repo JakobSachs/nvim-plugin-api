@@ -58,7 +58,6 @@ def plugins():
 
     # Handle page and sorting
     page = request.args.get("page", 1, type=int)
-
     sort = request.args.get("sort", "stars", type=str)
 
     # Handle and validate desc
@@ -69,6 +68,7 @@ def plugins():
     elif desc_str.lower() == "false":
         desc = False
     else:
+        app.logger.info(f"Invalid desc parameter: {desc_str}")
         return "Invalid desc parameter", 400
 
     # Handle search
@@ -91,6 +91,7 @@ def plugins():
 
     # validate
     if sort not in ["name", "stars", "last_updated"]:
+        app.logger.info(f"Invalid sort parameter: {sort}")
         return "Invalid sort parameter", 400
 
     # get repos
@@ -129,6 +130,7 @@ def plugin_details(author, name):
     db = get_db()
     repo = db["repo"].find_one({"author": author, "name": name})
     if repo is None:
+        app.logger.info(f"Request asked for non-existing plugin: {author}/{name}")
         return "Plugin not found", 404
 
     repo.pop("_id")
@@ -136,27 +138,16 @@ def plugin_details(author, name):
     return dumps(repo)
 
 
-@app.route("/plugins/search")
-def plugin_search():
+@app.after_request
+def after_request(response):
     """
-    Search for plugins by name.
+    Wrapper around after_request to log all requests.
     """
-    query = request.args.get("q", "", type=str)
-    db = get_db()
-    repos = db["repo"].find({"name": {"$regex": query, "$options": "i"}}).limit(15)
-    res = [
-        {
-            "name": x["name"],
-            "description": x["description"],
-            "url": x["url"],
-            "stars": x["stars"],
-            "readme": x["readme"] if "readme" in x else "",
-        }
-        for x in repos
-    ]
-    return dumps(res)
+    # log all requests
+    app.logger.info(f"{request.method} {request.path} {response.status_code}")
+    return response
 
 
 # main
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
