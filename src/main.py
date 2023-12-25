@@ -137,6 +137,29 @@ def plugin_details(author, name):
     return dumps(repo)
 
 
+@app.route("/star_history/<author>/<name>/")
+def star_history(author, name):
+    """
+    Get star history of plugin by author and name.
+    """
+    db = get_db()
+    repo = db["repo"].find_one({"author": author, "name": name})
+    if repo is None:
+        app.logger.info(f"Request asked for non-existing plugin: {author}/{name}")
+        return "Plugin not found", 404
+    id = repo["_id"]
+    stars_curs = db["stars_timeseries"].find({"repo_id": id})
+
+    stars = []
+
+    for star in stars_curs:
+        star.pop("_id")
+        star.pop("repo_id")
+        stars.append(star)
+
+    return dumps(stars)
+
+
 @app.after_request
 def after_request(response):
     """
