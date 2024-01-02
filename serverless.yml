@@ -1,0 +1,38 @@
+service: nvim-plugins-api
+
+provider:
+  name: aws
+  runtime: python3.11
+  stage: dev
+  region: us-east-1
+  environment:
+    PAGE_LIMIT: 25
+    DB_PASSWORD: ${ssm:/nvim_plugins_db_passowrd}
+    DB_USERNAME: ${ssm:/nvim_plugins_db_name}
+
+plugins:
+  - serverless-wsgi
+  - serverless-python-requirements
+
+functions:
+  api:
+    handler: wsgi_handler.handler
+    events:
+      - http:
+          path: /
+          method: get
+      - http:
+          path: /languages
+          method: get
+      - http:
+          path: /plugins
+          method: get
+      - http:
+          path: /plugin/{author}/{name}
+          method: get
+      - http:
+          path: /star_history/{author}/{name}
+          method: get
+custom:
+  wsgi:
+    app: src/main.app
